@@ -1,0 +1,61 @@
+{
+  "info": {
+    "name": "School Payments - Backend",
+    "_postman_id": "school-payments",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth - Register",
+      "request": {
+        "method": "POST",
+        "header": [{"key":"Content-Type","value":"application/json"}],
+        "body": {"mode":"raw","raw":"{ \"username\":\"newuser\",\"password\":\"newpass\" }"},
+        "url": {"raw":"http://localhost:3000/auth/register","protocol":"http","host":["localhost"],"port":"3000","path":["auth","register"]}
+      }
+    },
+    {
+      "name": "Auth - Login",
+      "request": {
+        "method": "POST",
+        "header": [{"key":"Content-Type","value":"application/json"}],
+        "body":{"mode":"raw","raw":"{ \"username\":\"newuser\",\"password\":\"newpass\" }"},
+        "url":{"raw":"http://localhost:3000/auth/login","protocol":"http","host":["localhost"],"port":"3000","path":["auth","login"]}
+      }
+    },
+    {
+      "name": "Create Payment",
+      "request": {
+        "method": "POST",
+        "header": [{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{token}}"}],
+        "body":{"mode":"raw","raw":"{ \"school_id\":\"65b0e6293e9f76a9694d84b4\", \"amount\":\"100\" }"},
+        "url":{"raw":"http://localhost:3000/create-payment","protocol":"http","host":["localhost"],"port":"3000","path":["create-payment"]}
+      }
+    },
+    {
+      "name": "Webhook (simulate)",
+      "request": {
+        "method": "POST",
+        "header": [{"key":"Content-Type","value":"application/json"}],
+        "body":{"mode":"raw","raw":"{\n  \"status\":200,\n  \"order_info\": { \"order_id\":\"<collect_id>/<txn>\", \"order_amount\":100, \"transaction_amount\":100, \"status\":\"success\", \"payment_time\":\"2025-04-23T08:14:21.945Z\" }\n}"},
+        "url":{"raw":"http://localhost:3000/webhook","protocol":"http","host":["localhost"],"port":"3000","path":["webhook"]}
+      }
+    },
+    {
+      "name": "Transactions",
+      "request": {
+        "method": "GET",
+        "header": [{"key":"Authorization","value":"Bearer {{token}}"}],
+        "url":{"raw":"http://localhost:3000/transactions?page=1&limit=10","protocol":"http","host":["localhost"],"port":"3000","path":["transactions"],"query":[{"key":"page","value":"1"},{"key":"limit","value":"10"}]}
+      }
+    },
+    {
+      "name": "Admin - Webhook Logs",
+      "request": {
+        "method":"GET",
+        "header":[{"key":"Authorization","value":"Bearer {{token}}"}],
+        "url":{"raw":"http://localhost:3000/admin/webhook-logs?page=1&limit=20","protocol":"http","host":["localhost"],"port":"3000","path":["admin","webhook-logs"],"query":[{"key":"page","value":"1"},{"key":"limit","value":"20"}]}
+      }
+    }
+  ]
+}

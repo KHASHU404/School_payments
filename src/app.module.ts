@@ -6,6 +6,8 @@ import { OrdersModule } from './orders/orders.module';
 import { AuthModule } from './auth/auth.module';
 import { PaymentsModule } from './payments/payments.module';
 import { TransactionsModule } from './transactions/transactions.module';
+import { IndexesSyncService } from './utils/indexes-sync.service';
+import {UtilsModule} from './utils/utils.module';
 
 @Module({
   imports: [
@@ -32,12 +34,14 @@ import { TransactionsModule } from './transactions/transactions.module';
       },
       inject: [ConfigService],
     }),
-
+    
     OrdersModule,
     AuthModule,
     PaymentsModule,
-    TransactionsModule
+    TransactionsModule,
+    UtilsModule,
     // ... other modules
   ],
+  providers: [IndexesSyncService],
 })
 export class AppModule {}

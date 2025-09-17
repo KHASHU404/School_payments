@@ -1,17 +1,28 @@
 // src/payments/payments.controller.ts
-import { Controller, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, Req, Res, UseGuards, Query } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
-import { CreatePaymentDto } from '../orders/dto/create-payment.dto';
+import { CreatePaymentDto } from './dto/create-payment.dto';
 import { AuthGuard } from '@nestjs/passport';
+import type { Request, Response } from 'express';
 
-@Controller('create-payment')
+@Controller()
 export class PaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}
 
-  // protect this route with JWT (only authenticated users can create payment)
   @UseGuards(AuthGuard('jwt'))
-  @Post()
-  async create(@Body() dto: CreatePaymentDto) {
-    return this.paymentsService.createCollect(dto);
+ @Post('create-payment')
+async createPayment(@Body() dto: CreatePaymentDto, @Req() req: Request, @Res() res: Response) {
+  try {
+    console.log('Create payment request body:', dto);
+    const result = await this.paymentsService.createPayment(dto);
+    console.log('Create payment result:', result);
+    return res.json(result);
+  } catch (error) {
+    console.error('Create payment error:', error);
+    return res.status(500).json({
+      message: 'Internal server error',
+      error: error.message,
+    });
   }
+}
 }

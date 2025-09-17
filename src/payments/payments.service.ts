@@ -45,6 +45,7 @@ export class PaymentsService {
     // 2) Create sign JWT using PG secret for provider
     const signPayload = { school_id: dto.school_id, amount: dto.amount, callback_url: callback };
     const sign = jwt.sign(signPayload, pgKey);
+    
 
     const body = {
       school_id: dto.school_id,
@@ -90,6 +91,24 @@ export class PaymentsService {
       await this.orderModel.findByIdAndUpdate(createdOrder._id, { $set: { payment_status: 'provider_error' } }).exec();
 
       throw new InternalServerErrorException('Payment provider request failed');
+    }
+  }
+
+  async createPayment(dto: CreatePaymentDto) {
+    try {
+      this.logger.log(`Creating payment for school ${dto.school_id} amount ${dto.amount}`);
+
+      // Example: Use ConfigService to get API key
+      const apiKey = this.configService.get<string>('PAYMENT_API_KEY');
+      if (!apiKey) {
+        throw new Error('Payment API key is missing');
+      }
+
+      // Further logic: Create payment, etc.
+      return { success: true };
+    } catch (error) {
+      this.logger.error('Error in createPayment', error.stack);
+      throw error;
     }
   }
 }

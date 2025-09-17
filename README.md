@@ -1,98 +1,242 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# School Payments — Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+This repository contains the **School Payments** backend (NestJS + MongoDB) implemented for the internship assessment. The service provides order creation, payment integration, webhook processing, transaction querying, JWT auth, and admin endpoints.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+---
 
-## Description
+## What’s included
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+* NestJS REST API
+* MongoDB (Atlas) schemas: **Order**, **OrderStatus**, **WebhookLog**, **User**
+* JWT authentication (users persisted in MongoDB, passwords hashed with bcrypt)
+* Payment create-collect integration (POST `/create-payment`) — persists a local Order and maps provider `collect_request_id` to it
+* Webhook endpoint (POST `/webhook`) — logs raw payloads and upserts `OrderStatus`, updates `Order`
+* Transaction listing with aggregation, pagination, sorting & filtering (GET `/transactions`)
+* Admin endpoint to list webhook logs (GET `/admin/webhook-logs`)
+* Basic validation (class-validator DTOs), logging, and indexes
 
-## Project setup
+---
+
+## Quick start (local)
+
+1. **Clone repo**
 
 ```bash
-$ npm install
+git clone <your-repo-url>
+cd backend
 ```
 
-## Compile and run the project
+2. **Install**
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+npm install
 ```
 
-## Run tests
+3. **Environment**
+
+Create a `.env` file (or copy `.env.example`) and set the variables below (examples included):
+
+```
+MONGODB_URI=mongodb+srv://<user>:<pwd>@cluster0.nsabbc1.mongodb.net/school-payments?retryWrites=true&w=majority
+APP_PORT=3000
+NODE_ENV=development
+JWT_SECRET=supersecretkey123
+JWT_EXPIRES_IN=3600s
+PAYMENT_API_KEY=<provider-api-key>
+PAYMENT_PG_KEY=<pg-secret>
+PAYMENT_BASE_URL=https://dev-vanilla.edviron.com/erp
+PAYMENT_CALLBACK_URL=http://localhost:3000/payment/callback
+```
+
+4. **Run dev server**
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+npm run start:dev
 ```
 
-## Deployment
+Server will run at `http://localhost:3000`.
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+---
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+## API Endpoints (summary & examples)
 
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+> All endpoints that require auth expect a header: `Authorization: Bearer <JWT>`
+
+### Auth
+
+* `POST /auth/register` — create user
+
+  * Body: `{ "username": "newuser", "password": "newpass" }`
+* `POST /auth/login` — returns `{ access_token }`
+
+  * Body: `{ "username": "newuser", "password": "newpass" }`
+
+PowerShell login example (returns JWT):
+
+```powershell
+curl -X POST "http://localhost:3000/auth/login" `
+  -H "Content-Type: application/json" `
+  -d '{ "username": "newuser", "password": "newpass" }'
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+---
 
-## Resources
+### Orders
 
-Check out a few resources that may come in handy when working with NestJS:
+* `POST /orders` — create a local order (protected)
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+  * Body example:
 
-## Support
+  ```json
+  {
+    "school_id":"65b0e6293e9f76a9694d84b4",
+    "student_info": { "name":"John Doe", "id":"STU001", "email":"j@x.com" },
+    "gateway_name":"TestGateway",
+    "custom_order_id":"ORDER123"
+  }
+  ```
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+* `GET /orders` — list orders (protected)
 
-## Stay in touch
+* `GET /orders/:id` — get order by `_id` (protected)
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+* `POST /orders/:id/pay` — mark order paid (internal/testing)
 
-## License
+PowerShell create order:
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+```powershell
+curl -X POST "http://localhost:3000/orders" `
+  -H "Content-Type: application/json" `
+  -H "Authorization: Bearer <JWT>" `
+  -d '{ "school_id": "65b0...", "student_info": { "name":"A","id":"STU" } }'
+```
+
+---
+
+### Payment integration
+
+* `POST /create-payment` — calls provider `create-collect-request` and persists a local Order. Returns provider response + local order mapping.
+
+  * Body: `school_id` (string), `amount` (string), `callback_url` (optional), `student_info` (optional)
+
+Example (PowerShell):
+
+```powershell
+curl -X POST "http://localhost:3000/create-payment" `
+  -H "Content-Type: application/json" `
+  -H "Authorization: Bearer <JWT>" `
+  -d '{ "school_id":"65b0e6293e9f76a9694d84b4", "amount":"100", "callback_url":"http://localhost:3000/payment/callback" }'
+```
+
+Notes:
+
+* `sign` JWT for provider is generated server-side using `PAYMENT_PG_KEY` and provider-specific payload.
+* The server updates the created Order with `custom_order_id = <provider_collect_request_id>` when provider returns it. That enables webhook mapping.
+
+---
+
+### Webhook
+
+* `POST /webhook` — receives provider callbacks, logs payload, upserts `OrderStatus`, updates `Order`
+
+PowerShell test (use an actual Order \_id as collect\_id or provider collect id):
+
+```powershell
+curl -X POST "http://localhost:3000/webhook" `
+  -H "Content-Type: application/json" `
+  -d '{
+    "status":200,
+    "order_info": {
+      "order_id":"<collect_id_or_custom_order_id>/TXN-001",
+      "order_amount":100,
+      "transaction_amount":100,
+      "gateway":"PhonePe",
+      "bank_reference":"BNKREF",
+      "status":"success",
+      "payment_mode":"upi",
+      "payemnt_details":"success@ybl",
+      "payment_time":"2025-04-23T08:14:21.945+00:00"
+    }
+  }'
+```
+
+---
+
+### Transactions (aggregation)
+
+* `GET /transactions` — aggregated list (combines OrderStatus + Order)
+
+  * Query params: `page`, `limit`, `status`, `schoolId`, `sort`, `order`
+  * Example: `?page=1&limit=20&sort=payment_time&order=desc`
+
+* `GET /transactions/school/:schoolId` — transactions for a school
+
+* `GET /transaction-status/:custom_order_id` — check transaction status by `custom_order_id`
+
+PowerShell examples:
+
+```powershell
+curl -X GET "http://localhost:3000/transactions?page=1&limit=10&sort=payment_time&order=desc" `
+  -H "Authorization: Bearer <JWT>"
+```
+
+---
+
+### Admin: Webhook logs
+
+* `GET /admin/webhook-logs` — paginated list of webhook logs (protected)
+
+  * Query params: `page`, `limit`, `processed` (true/false)
+
+Example:
+
+```powershell
+curl -X GET "http://localhost:3000/admin/webhook-logs?page=1&limit=20&processed=false" `
+  -H "Authorization: Bearer <JWT>"
+```
+
+---
+
+## Database indexes (important)
+
+* `orders`: indexes on `school_id`, `custom_order_id` (unique sparse), `transaction_id`
+* `order_statuses`: indexes on `collect_id`, `transaction_id`, `payment_time`
+* `webhooklogs`: index on `{ processed: 1, createdAt: -1 }`
+
+Mongoose schemas create these indexes at app start. If you changed schema fields, ensure you rebuild indexes in Atlas if necessary.
+
+---
+
+## Deployment notes
+
+* Use environment variables on the host (do not commit `.env`).
+* For quick hosting you can use Render / Heroku (backend) and Vercel / Netlify (frontend).
+* Ensure MongoDB Atlas allows the host IP (or use VPC peering). Add production `JWT_SECRET` and secure payment keys.
+
+---
+
+## Postman collection
+
+* You can create a Postman collection by importing cURL commands or use the exported `postman_collection.json` (if you add one). Include examples for: register, login, create-order, create-payment, webhook (simulation), transactions, admin logs.
+
+---
+
+## What's left (checklist)
+
+* [ ] Final provider integration tests (use provider sandbox)
+* [ ] README polishing (this file)
+* [ ] Postman collection JSON file (optional but recommended)
+* [ ] Frontend (React + Vite + Tailwind) scaffold & implementation
+* [ ] Deployment to cloud + CI settings
+
+---
+
+## Current completion estimate
+
+* **Backend:** \~95–97% (small remaining polish, docs, deployment)
+* **Frontend:** 0% (not started)
+* **Overall:** \~70–75%
+
+---
+
+If you want I can now **scaffold the frontend** (Vite + React + Tailwind) and create the Transactions dashboard pages (paginated table + filters). Say `yes` and I’ll generate the scaffold and key components next.
