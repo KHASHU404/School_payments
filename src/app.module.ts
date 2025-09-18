@@ -8,6 +8,8 @@ import { PaymentsModule } from './payments/payments.module';
 import { TransactionsModule } from './transactions/transactions.module';
 import { IndexesSyncService } from './utils/indexes-sync.service';
 import {UtilsModule} from './utils/utils.module';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
 
 @Module({
   imports: [
@@ -42,6 +44,7 @@ import {UtilsModule} from './utils/utils.module';
     UtilsModule,
     // ... other modules
   ],
-  providers: [IndexesSyncService],
+  controllers: [AppController],
+  providers: [IndexesSyncService, AppService],
 })
 export class AppModule {}
