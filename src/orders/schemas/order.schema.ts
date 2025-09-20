@@ -20,8 +20,8 @@ export const StudentInfoSchema = SchemaFactory.createForClass(StudentInfo);
 
 @Schema({ timestamps: true })
 export class Order {
-  @Prop({ type: Types.ObjectId })
-  _id?: Types.ObjectId;
+  // @Prop({ type: Types.ObjectId })
+  // _id?: Types.ObjectId;
 
   @Prop({ type: Types.ObjectId, required: true })
   school_id: Types.ObjectId | string;

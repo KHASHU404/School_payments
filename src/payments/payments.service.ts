@@ -65,25 +65,41 @@ export class PaymentsService {
       });
 
       const data = resp.data;
+      this.logger.debug('Provider response raw: ' + JSON.stringify(resp.data))
 
       // 4) Persist provider collect_request_id onto the Order (so webhook can find via custom_order_id)
-      const providerCollectId = data?.collect_request_id ?? data?.collectRequestId ?? null;
-      if (providerCollectId) {
-        createdOrder.custom_order_id = providerCollectId;
-        await createdOrder.save();
-      } else {
-        // if provider didn't return id, keep our initial custom_order_id
-        this.logger.warn('Provider did not return collect_request_id; keeping local id');
-      }
+      // 4) Persist provider collect_request_id onto the Order (so webhook can find via custom_order_id)
+const providerCollectId = data?.collect_request_id ?? data?.collectRequestId ?? null;
+if (providerCollectId) {
+  // safer: update via findByIdAndUpdate (avoids calling .save() on non-doc objects)
+  await this.orderModel.findByIdAndUpdate(
+    createdOrder._id,
+    { $set: { custom_order_id: providerCollectId } },
+    { new: true }
+  ).exec();
 
-      // 5) Return provider response + local order mapping info
-      return {
-        provider: data,
-        order: {
-          _id: createdOrder._id,
-          custom_order_id: createdOrder.custom_order_id,
-        },
-      };
+  // optional: reload createdOrder for return payload
+  const refreshed = await this.orderModel.findById(createdOrder._id).exec();
+  // use 'refreshed' if you want the saved copy in the returned order object
+  return {
+    provider: data,
+    order: {
+      _id: refreshed?._id ?? createdOrder._id,
+      custom_order_id: refreshed?.custom_order_id ?? createdOrder.custom_order_id,
+    },
+  };
+} else {
+  this.logger.warn('Provider did not return collect_request_id; keeping local id');
+  // return current createdOrder mapping
+  return {
+    provider: data,
+    order: {
+      _id: createdOrder._id,
+      custom_order_id: createdOrder.custom_order_id,
+    },
+  };
+}
+
     } catch (err: any) {
       this.logger.error('Payment provider error', err?.response?.data ?? err?.message);
 
@@ -94,21 +110,64 @@ export class PaymentsService {
     }
   }
 
-  async createPayment(dto: CreatePaymentDto) {
-    try {
-      this.logger.log(`Creating payment for school ${dto.school_id} amount ${dto.amount}`);
+  // inside PaymentsService class (replace existing createPayment)
+  /**
+   * High-level entry used by frontend: creates local order, calls provider,
+   * and returns a consistent payload containing a redirect URL (if any).
+   */
+  // Replace existing createPayment with this implementation
+async createPayment(dto: CreatePaymentDto) {
+  try {
+    this.logger.log(`Creating payment for school ${dto.school_id} amount ${dto.amount}`);
 
-      // Example: Use ConfigService to get API key
-      const apiKey = this.configService.get<string>('PAYMENT_API_KEY');
-      if (!apiKey) {
-        throw new Error('Payment API key is missing');
-      }
+    // Call the full provider flow implemented in createCollect
+    const result = await this.createCollect(dto);
 
-      // Further logic: Create payment, etc.
-      return { success: true };
-    } catch (error) {
-      this.logger.error('Error in createPayment', error.stack);
-      throw error;
-    }
+    // normalize result
+    const provider: any = result?.provider ?? {};
+    const order: any = result?.order ?? {};
+
+    // Try many possible places the provider might put a URL (defensive)
+    const paymentUrl =
+      provider?.Collect_request_url ||
+      provider?.collect_request_url ||
+      provider?.collectRequestUrl ||
+      provider?.redirect_url ||
+      provider?.payment_url ||
+      provider?.url ||
+      provider?.paymentUrl ||
+      provider?.data?.Collect_request_url ||
+      provider?.data?.collect_request_url ||
+      null;
+
+    const collectId =
+      provider?.collect_request_id ||
+      provider?.collectRequestId ||
+      provider?.collect_requestid ||
+      order?.custom_order_id ||
+      order?._id ||
+      null;
+
+    // Helpful debug logging in dev
+    this.logger.debug('Normalized createPayment result', {
+      collectId,
+      paymentUrl,
+      providerPreview: provider ? (typeof provider === 'object' ? provider : String(provider)) : null,
+      order,
+    });
+
+    return {
+      success: true,
+      collect_request_id: collectId,
+      collect_request_url: paymentUrl,
+      provider_raw: provider,
+      order: order,
+    };
+  } catch (error: any) {
+    // log and rethrow (controller will return 500)
+    this.logger.error('Error in createPayment', error?.response?.data ?? error?.message ?? error);
+    throw error;
   }
+}
+
 }

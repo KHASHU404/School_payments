@@ -29,4 +29,13 @@ export class TransactionsController {
   async status(@Param('custom_order_id') custom_order_id: string) {
     return this.svc.transactionStatusByCustomOrderId(custom_order_id);
   }
+
+   @Get('school/:schoolId')
+  async getTransactionsBySchool(
+    @Param('schoolId') schoolId: string,
+    @Query('page') page = 1,
+    @Query('limit') limit = 20,
+  ) {
+    return this.svc.listBySchool(schoolId, +page, +limit);
+  }
 }
